@@ -1,0 +1,76 @@
+---
+title: "lab 9 part 2 lizard tails chi square"
+author: "Lauren Harris"
+date: "11/24/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(tidyverse)
+library(here)
+library(janitor)
+library(broom)
+```
+
+Read in data
+```{r}
+lizards <- read_csv(here("data", "lizards.csv"))
+```
+
+Get counts of lizards by species
+```{r}
+lizards %>% 
+  count(spp) %>% 
+  arrange(-n)
+```
+
+## Make a subset 
+
+- only UTST lizards
+- only sites with 3 highest trapped populations: - IBPE (enclosure grassland)
+- RABB (rabbit mesquite site)
+- EAST (east tarbush site)
+- Tail condition is recorded (W - whole, B = broken)
+```{r}
+utst <- lizards %>% 
+  filter(spp == "UTST") %>% 
+  filter(site %in% c("IBPE", "RABB", "EAST")) %>%
+  filter(tail %in% c("B", "W"))
+```
+
+## Find counts and proportions of lizards with broken or whole tails at each site
+
+```{r}
+utst %>% 
+  count(site, tail)
+```
+
+```{r}
+tail_counts <- utst %>% 
+  tabyl(site, tail)
+
+tail_proportions <- tail_counts %>% 
+  adorn_percentages() %>% 
+  adorn_pct_formatting(digits = 2) %>% 
+  adorn_ns()
+```
+
+## Convert to a contingency table
+
+Use `column_to_rowname()` function
+```{r}
+lizard_ct <- tail_counts %>% 
+  column_to_rownames(var = "site")
+```
+
+## Chi-square
+
+```{r}
+lizard_x2 <- chisq.test(lizard_ct)
+lizard_x2
+
+lizard_tidy <- tidy(lizard_x2)
+```
+There is a significant association (i.e. non-independence) between site and lizard tail breakage ($\chi$^2^(`r lizard_tidy$parameter`) = `r lizard_tidy$statistic`, *p* = `r round(lizard_tidy$p.value, 2)`)
